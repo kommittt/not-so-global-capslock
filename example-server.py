@@ -97,7 +97,7 @@ html = """
       <body>
             <h1><a href="https://github.com/kommittt/not-so-global-capslock">not-so-global capslock</a></h1>
 
-            <div class="container">
+            <div id="container" class="container">
                 <div id="capsState" class="caps-state off">caps lock is off</div>
             </div>
             
@@ -111,7 +111,7 @@ html = """
 
                 <br><br><br>
                 <b>how to connect?</b> <br>
-                1. <a href="https://raw.githubusercontent.com/kommittt/not-so-global-capslock/main/client.py" download="client.py">click here to download the client.py file if you haven't</a> <br>
+                1. <a href="https://raw.githubusercontent.com/kommittt/not-so-global-capslock/main/client.py">click here to download the client.py file if you haven't</a> <br>
                 2. make sure you have python 3.10+ installed <br>
                 3. open command prompt, then type in: pip install websockets <br>
                 4. go to wherever you downloaded client.py <br>
@@ -132,17 +132,17 @@ html = """
             ws.onmessage = (event) => {
                 const data = event.data;
 
-              if (data.startsWith("c ")) {
+                if (data.startsWith("c ")) {
                     // Update number of connected clients
                     const count = data.split(" ")[1];
                     clientsDiv.textContent = `there are ${count} people currently syncing`;
-              } else if (data === "1") {
+                } else if (data === "1") {
                     capsDiv.textContent = "CAPS LOCK IS ON";
                     capsDiv.classList.remove("off");
                     capsDiv.classList.add("on");
                     box.classList.remove("off");
                     box.classList.add("on");
-              } else if (data === "0") {
+                } else if (data === "0") {
                     capsDiv.textContent = "caps Lock is off";
                     capsDiv.classList.remove("on");
                     capsDiv.classList.add("off");
@@ -153,12 +153,11 @@ html = """
 
             ws.onopen = () => console.log("Status WebSocket connected");
             ws.onclose = () => console.log("Status WebSocket disconnected");
-    </script>
+            </script>
     </body>
 
 </html>
 """
-
 
 @app.get("/")
 async def get_root():
@@ -183,7 +182,6 @@ async def broadcast_state(message: str):
             listening_clients.remove(websocket)
 
 def can_update(websocket: WebSocket) -> bool:
-    # Optional: implement per-client rate limiting if needed
     return True
 
 @app.websocket("/ws")
@@ -194,7 +192,6 @@ async def websocket_endpoint(websocket: WebSocket):
     connected_clients[websocket] = client_id
     logger.info(f"{client_id} connected ({len(connected_clients)} total)")
 
-    # Send current state
     await websocket.send_text(message_for_state())
 
     try:
@@ -202,7 +199,6 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 data = await websocket.receive_text()
             except WebSocketDisconnect:
-                # Stop the loop immediately if client disconnects
                 break
 
             if not can_update(websocket):
@@ -229,39 +225,15 @@ async def status_endpoint(websocket: WebSocket):
     logger.info(f"{client_id} is listening to status")
 
     try:
-        # Send initial info
-        await websocket.send_text(f"c {len(connected_clients)}")  # client count
-        await websocket.send_text(message_for_state())            # Caps Lock state
-
         while True:
-            # Periodically update them
-            await asyncio.sleep(5)
+            # Periodically send both Caps Lock state and client count
             await websocket.send_text(f"c {len(connected_clients)}")
+            await websocket.send_text(message_for_state())
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
     finally:
         listening_clients.remove(websocket)
         logger.info(f"{client_id} stopped listening")
 
-
-# Optional: periodic broadcast to ensure all clients stay in sync
-@app.on_event("startup")
-async def startup_event():
-    async def periodic_broadcast():
-        last_message = None
-        while True:
-            message = message_for_state()
-            if message != last_message:
-                last_message = message
-                await broadcast_state(message)
-            await asyncio.sleep(0.05)  # 50ms
-    asyncio.create_task(periodic_broadcast())
-
-# === Run with uvicorn ===
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
-
-# I JUST WANT THIS TO WORK I DONT CARE ABOUT AI ANYMORE MAN LET ME HAVE FUNNNNN
+@app.on_event("start_
