@@ -111,7 +111,7 @@ html = """
 
                 <br><br><br>
                 <b>how to connect?</b> <br>
-                1. <a href="https://raw.githubusercontent.com/kommittt/not-so-global-capslock/main/client.py">click here to download the client.py file if you haven't</a> <br>
+                1. <a href="/client.py" download>click here to download the client.py file if you haven't</a> <br>
                 2. make sure you have python 3.10+ installed <br>
                 3. open command prompt, then type in: pip install websockets <br>
                 4. go to wherever you downloaded client.py <br>
@@ -158,6 +158,14 @@ html = """
 
 </html>
 """
+
+# Serve the client.py file directly
+from fastapi.responses import FileResponse
+
+@app.get("/client.py")
+async def download_client():
+    return FileResponse("client.py", media_type="text/x-python", filename="client.py")
+
 
 @app.get("/")
 async def get_root():
