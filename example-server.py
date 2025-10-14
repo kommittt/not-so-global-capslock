@@ -2,12 +2,13 @@ import asyncio
 import os
 import websockets
 
-# Keep track of connected clients
 connected_clients = set()
 
-async def handle_ws(websocket, path):
+async def handle_ws(websocket):
+    # Get path from websocket.request (in new versions)
+    path = websocket.path
+
     if path != "/ws":
-        # Reject any path except /ws
         await websocket.close(code=1008, reason="Invalid path")
         return
 
@@ -17,9 +18,8 @@ async def handle_ws(websocket, path):
     try:
         async for message in websocket:
             print(f"Received: {message}")
-
-            # Broadcast message to all other clients
-            for client in connected_clients:
+            # Broadcast to others
+            for client in connected_clients.copy():
                 if client != websocket:
                     try:
                         await client.send(message)
