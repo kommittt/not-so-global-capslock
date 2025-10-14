@@ -53,7 +53,7 @@ def can_update(websocket: WebSocket) -> bool:
 async def websocket_endpoint(websocket: WebSocket):
     global capslock_enabled
     await websocket.accept()
-    client_id = str(websocket.client)  # simple identifier
+    client_id = str(websocket.client)
     connected_clients[websocket] = client_id
     logger.info(f"{client_id} connected ({len(connected_clients)} total)")
 
@@ -64,26 +64,26 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             try:
                 data = await websocket.receive_text()
-                if not can_update(websocket):
-                    continue
-
-                if len(data) > 1:
-                    logger.info(f"Received invalid data from {client_id}: {data}")
-                elif data == "1" and capslock_enabled != True:
-                    capslock_enabled = True
-                    await broadcast_state(message_for_state())
-                elif data == "0" and capslock_enabled != False:
-                    capslock_enabled = False
-                    await broadcast_state(message_for_state())
             except WebSocketDisconnect:
-                # stop processing this client
+                # Stop the loop immediately if client disconnects
                 break
-            except Exception as e:
-                logger.warning(f"Error in client loop for {client_id}: {e}")
+
+            if not can_update(websocket):
+                continue
+
+            if len(data) > 1:
+                logger.info(f"Received invalid data from {client_id}: {data}")
+            elif data == "1" and capslock_enabled != True:
+                capslock_enabled = True
+                await broadcast_state(message_for_state())
+            elif data == "0" and capslock_enabled != False:
+                capslock_enabled = False
+                await broadcast_state(message_for_state())
     finally:
         connected_clients.pop(websocket, None)
         last_websocket_update.pop(websocket, None)
         logger.info(f"{client_id} disconnected ({len(connected_clients)} remaining)")
+
 
 
 # Optional: periodic broadcast to ensure all clients stay in sync
