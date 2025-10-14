@@ -22,12 +22,64 @@ last_websocket_update: Dict[WebSocket, datetime] = {}  # rate-limiting (optional
 html = """
 <!DOCTYPE html>
 <html>
+  <head>
+    <title>Not-So-Global-CapsLock</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        margin-top: 50px;
+      }
+      .caps-state {
+        font-size: 2em;
+        margin: 20px;
+        color: green;
+      }
+      .caps-state.off {
+        color: red;
+      }
+      .clients-count {
+        font-size: 1.2em;
+      }
+    </style>
+  </head>
   <body>
-    <h1>WebSocket server is online!</h1>
-    <p>Connect with your client.py script to /ws</p>
+    <h1>Not-So-Global-CapsLock</h1>
+    <div id="capsState" class="caps-state off">Caps Lock is OFF</div>
+    <div id="clientCount" class="clients-count">Connected: 0</div>
+
+    <script>
+      const capsDiv = document.getElementById("capsState");
+      const clientsDiv = document.getElementById("clientCount");
+
+      // Connect to status websocket
+      const ws = new WebSocket(`wss://${window.location.host}/status`);
+
+      ws.onmessage = (event) => {
+        const data = event.data;
+
+        if (data.startsWith("c ")) {
+          // Update number of connected clients
+          const count = data.split(" ")[1];
+          clientsDiv.textContent = `Connected: ${count}`;
+        } else if (data === "1") {
+          capsDiv.textContent = "Caps Lock is ON";
+          capsDiv.classList.remove("off");
+          capsDiv.classList.add("on");
+        } else if (data === "0") {
+          capsDiv.textContent = "Caps Lock is OFF";
+          capsDiv.classList.remove("on");
+          capsDiv.classList.add("off");
+        }
+      };
+
+      ws.onopen = () => console.log("Status WebSocket connected");
+      ws.onclose = () => console.log("Status WebSocket disconnected");
+    </script>
   </body>
 </html>
 """
+
 
 @app.get("/")
 async def get_root():
