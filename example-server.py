@@ -1,41 +1,21 @@
 import asyncio
-import os
 import websockets
 
-connected_clients = set()
+connected = set()
 
 async def handle_ws(websocket):
-    # Get path from websocket.request (in new versions)
-    path = websocket.path
-
-    if path != "/ws":
-        await websocket.close(code=1008, reason="Invalid path")
-        return
-
-    connected_clients.add(websocket)
-    print(f"Client connected ({len(connected_clients)} total)")
-
+    connected.add(websocket)
     try:
         async for message in websocket:
-            print(f"Received: {message}")
-            # Broadcast to others
-            for client in connected_clients.copy():
-                if client != websocket:
-                    try:
-                        await client.send(message)
-                    except Exception as e:
-                        print(f"Error sending to client: {e}")
-    except websockets.ConnectionClosed:
-        pass
+            # broadcast to all other clients
+            for conn in connected:
+                if conn != websocket:
+                    await conn.send(message)
     finally:
-        connected_clients.remove(websocket)
-        print(f"Client disconnected ({len(connected_clients)} remaining)")
+        connected.remove(websocket)
 
 async def main():
-    port = int(os.environ.get("PORT", 8000))
-    print(f"Server running on port {port}")
-    async with websockets.serve(handle_ws, "", port):
-        await asyncio.Future()  # run forever
+    async with websockets.serve(handle_ws, "0.0.0.0", 8000):
+        await asyncio.Future()  # keep running forever
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
