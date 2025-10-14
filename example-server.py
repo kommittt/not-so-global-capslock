@@ -64,7 +64,7 @@ html = """
             .caps-state {
                 font-size: 2em;
                 margin: 20px;
-                color: green;
+                color: #00ff00;
             }
             .caps-state.off {
                 color: red;
@@ -143,7 +143,7 @@ html = """
                     box.classList.remove("off");
                     box.classList.add("on");
                 } else if (data === "0") {
-                    capsDiv.textContent = "caps Lock is off";
+                    capsDiv.textContent = "caps lock is off";
                     capsDiv.classList.remove("on");
                     capsDiv.classList.add("off");
                     box.classList.remove("on");
