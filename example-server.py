@@ -236,4 +236,19 @@ async def status_endpoint(websocket: WebSocket):
         listening_clients.remove(websocket)
         logger.info(f"{client_id} stopped listening")
 
-@app.on_event("start_
+@app.on_event("startup")
+async def startup_event():
+    async def periodic_broadcast():
+        last_message = None
+        while True:
+            message = message_for_state()
+            if message != last_message:
+                last_message = message
+                await broadcast_state(message)
+            await asyncio.sleep(0.05)
+    asyncio.create_task(periodic_broadcast())
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
