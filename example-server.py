@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # === Global state ===
 capslock_enabled = False
+listening_clients: set[WebSocket] = set()
 connected_clients: Dict[WebSocket, str] = {}  # websocket -> client id / IP
 last_websocket_update: Dict[WebSocket, datetime] = {}  # rate-limiting (optional)
 
@@ -36,7 +37,7 @@ def message_for_state():
     return "1" if capslock_enabled else "0"
 
 async def broadcast_state(message: str):
-    for websocket in list(connected_clients.keys()):  # iterate over a copy
+    for websocket in list(connected_clients.keys()):
         try:
             await websocket.send_text(message)
         except Exception:
@@ -44,6 +45,11 @@ async def broadcast_state(message: str):
             last_websocket_update.pop(websocket, None)
             logger.info(f"Removed disconnected client {client_id}")
 
+    for websocket in list(listening_clients):
+        try:
+            await websocket.send_text(message)
+        except Exception:
+            listening_clients.remove(websocket)
 
 def can_update(websocket: WebSocket) -> bool:
     # Optional: implement per-client rate limiting if needed
@@ -84,6 +90,27 @@ async def websocket_endpoint(websocket: WebSocket):
         last_websocket_update.pop(websocket, None)
         logger.info(f"{client_id} disconnected ({len(connected_clients)} remaining)")
 
+@app.websocket("/status")
+async def status_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    listening_clients.add(websocket)
+    client_id = str(websocket.client)
+    logger.info(f"{client_id} is listening to status")
+
+    try:
+        # Send initial info
+        await websocket.send_text(f"c {len(connected_clients)}")  # client count
+        await websocket.send_text(message_for_state())            # Caps Lock state
+
+        while True:
+            # Periodically update them
+            await asyncio.sleep(5)
+            await websocket.send_text(f"c {len(connected_clients)}")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        listening_clients.remove(websocket)
+        logger.info(f"{client_id} stopped listening")
 
 
 # Optional: periodic broadcast to ensure all clients stay in sync
