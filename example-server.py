@@ -36,12 +36,14 @@ def message_for_state():
     return "1" if capslock_enabled else "0"
 
 async def broadcast_state(message: str):
-    for websocket in connected_clients.copy():
+    for websocket in list(connected_clients.keys()):  # iterate over a copy
         try:
             await websocket.send_text(message)
-        except:
-            connected_clients.pop(websocket, None)
+        except Exception:
+            client_id = connected_clients.pop(websocket, "unknown")
             last_websocket_update.pop(websocket, None)
+            logger.info(f"Removed disconnected client {client_id}")
+
 
 def can_update(websocket: WebSocket) -> bool:
     # Optional: implement per-client rate limiting if needed
@@ -73,11 +75,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 elif data == "0" and capslock_enabled != False:
                     capslock_enabled = False
                     await broadcast_state(message_for_state())
+            except WebSocketDisconnect:
+                # stop processing this client
+                break
             except Exception as e:
                 logger.warning(f"Error in client loop for {client_id}: {e}")
-    except WebSocketDisconnect:
+    finally:
         connected_clients.pop(websocket, None)
+        last_websocket_update.pop(websocket, None)
         logger.info(f"{client_id} disconnected ({len(connected_clients)} remaining)")
+
 
 # Optional: periodic broadcast to ensure all clients stay in sync
 @app.on_event("startup")
