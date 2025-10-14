@@ -124,7 +124,7 @@ async def get_latest_message(websocket):
 
 async def run_client():
     #uri = "ws://localhost:8000/ws"
-    uri = "wss://globalcapslock.com/ws"
+    uri = "wss://not-so-global-capslock-production.up.railway.app/ws"
 
     async with websockets.connect(uri) as websocket:
         print("connected")
