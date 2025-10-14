@@ -127,7 +127,7 @@ async def run_client():
     uri = "wss://not-so-global-capslock-production.up.railway.app/ws"
 
     async with websockets.connect(uri) as websocket:
-        print("connected")
+        print("successfully connected! check out https://not-so-global-capslock-production.up.railway.app/ to see if it works. close terminal or press ctrl+c to disconnect")
         last_state = False
         while True:
             current_state = get_capslock_state()
